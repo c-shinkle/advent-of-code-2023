@@ -1,36 +1,39 @@
 pub mod input;
 
-use core::char;
 use std::{
     cmp::{max_by_key, min_by_key},
     collections::HashMap,
 };
 
-type IndexValue = (usize, u32);
-
 pub fn find_number(line: &str) -> Option<u32> {
-    let mut word_lookup: HashMap<&str, u32> = HashMap::new();
-    word_lookup.insert("zero", 0);
-    word_lookup.insert("one", 1);
-    word_lookup.insert("two", 2);
-    word_lookup.insert("three", 3);
-    word_lookup.insert("four", 4);
-    word_lookup.insert("five", 5);
-    word_lookup.insert("six", 6);
-    word_lookup.insert("seven", 7);
-    word_lookup.insert("eight", 8);
-    word_lookup.insert("nine", 9);
+    let mut value_lookup = HashMap::new();
+    value_lookup.insert("zero", 0);
+    value_lookup.insert("one", 1);
+    value_lookup.insert("two", 2);
+    value_lookup.insert("three", 3);
+    value_lookup.insert("four", 4);
+    value_lookup.insert("five", 5);
+    value_lookup.insert("six", 6);
+    value_lookup.insert("seven", 7);
+    value_lookup.insert("eight", 8);
+    value_lookup.insert("nine", 9);
 
-    let chars: Vec<char> = line.chars().collect();
-    let first_digit_with_index = chars
-        .iter()
-        .enumerate()
-        .find_map(|(index, char)| char.to_digit(10).map(|value| (index, value)));
-    let first_word_with_index: Option<IndexValue> = word_lookup
-        .keys()
-        .map(|word| (line.find(word), word))
-        .filter_map(|(index, word)| index.map(|index| (index, *word_lookup.get(word).unwrap())))
-        .min_by_key(|a| a.0);
+    let mut first_digit_with_index: Option<(usize, u32)> = None;
+    for (i, char) in line.char_indices() {
+        if let Some(digit) = char.to_digit(10) {
+            if first_digit_with_index.is_none() || i < first_digit_with_index.unwrap().0 {
+                first_digit_with_index = Some((i, digit));
+            }
+        }
+    }
+    let mut first_word_with_index: Option<(usize, u32)> = None;
+    for (word, value) in value_lookup.iter() {
+        if let Some(i) = line.find(word) {
+            if first_word_with_index.is_none() || i < first_word_with_index.unwrap().0 {
+                first_word_with_index = Some((i, *value))
+            }
+        }
+    }
     let first = match (first_digit_with_index, first_word_with_index) {
         (Some(first), Some(second)) => Some(min_by_key(first, second, |a| a.0).1),
         (Some((_, digit_value)), None) => Some(digit_value),
@@ -38,16 +41,13 @@ pub fn find_number(line: &str) -> Option<u32> {
         (None, None) => None,
     };
 
-    let len = chars.len();
-    let second_digit_with_index = chars
-        .into_iter()
+    let second_digit_with_index = line
+        .char_indices()
         .rev()
-        .enumerate()
-        .find_map(|(index, char)| char.to_digit(10).map(|value| (len - 1 - index, value)));
-    let second_word_with_index: Option<IndexValue> = word_lookup
-        .keys()
-        .map(|word| (line.rfind(word), word))
-        .filter_map(|(index, word)| index.map(|index| (index, *word_lookup.get(word).unwrap())))
+        .find_map(|(i, char)| char.to_digit(10).map(|value| (i, value)));
+    let second_word_with_index = value_lookup
+        .into_iter()
+        .filter_map(|(word, value)| Some((line.rfind(word)?, value)))
         .max_by_key(|a| a.0);
     let second = match (second_digit_with_index, second_word_with_index) {
         (Some(first), Some(second)) => Some(max_by_key(first, second, |a| a.0).1),
@@ -67,12 +67,35 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_two1nine() {
-        assert_eq!(Some(29), find_number("two1nine"));
+    fn first_digit_with_second_digit() {
+        assert_eq!(Some(2), find_number("0one2"));
     }
 
     #[test]
-    fn test_7fjqhrhsevenlbtwoninevnmct2() {
-        assert_eq!(Some(72), find_number("7fjqhrhsevenlbtwoninevnmct2"));
+    fn first_digit_with_second_word() {
+        assert_eq!(Some(35), find_number("3fourfive"));
+    }
+
+    #[test]
+    fn first_word_with_second_digit() {
+        assert_eq!(Some(68), find_number("six78"));
+    }
+
+    #[test]
+    fn first_word_with_second_word() {
+        let actual = find_number("nine0one");
+        assert_eq!(Some(91), actual);
+    }
+
+    #[test]
+    fn test_where_find_matters_for_first_word() {
+        let actual = find_number("1twothreetwo");
+        assert_eq!(Some(12), actual);
+    }
+
+    #[test]
+    fn test_where_rfind_matters_for_second_word() {
+        let actual = find_number("twothreetwo1");
+        assert_eq!(Some(21), actual);
     }
 }
