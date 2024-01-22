@@ -19,10 +19,13 @@ pub fn find_number(line: &str) -> Option<u32> {
     value_lookup.insert("nine", 9);
 
     let mut first_digit_with_index: Option<(usize, u32)> = None;
-    for (i, char) in line.char_indices() {
-        if let Some(digit) = char.to_digit(10) {
+    for (i, byte) in line.char_indices() {
+        if let Some(digit) = byte.to_digit(10) {
             if first_digit_with_index.is_none() || i < first_digit_with_index.unwrap().0 {
                 first_digit_with_index = Some((i, digit));
+                if i == 0 {
+                    break;
+                }
             }
         }
     }
@@ -44,7 +47,7 @@ pub fn find_number(line: &str) -> Option<u32> {
     let second_digit_with_index = line
         .char_indices()
         .rev()
-        .find_map(|(i, char)| char.to_digit(10).map(|value| (i, value)));
+        .find_map(|(i, byte)| byte.to_digit(10).map(|value| (i, value)));
     let second_word_with_index = value_lookup
         .into_iter()
         .filter_map(|(word, value)| Some((line.rfind(word)?, value)))
