@@ -3,7 +3,7 @@ pub mod input;
 use ndarray::{Array2, ArrayView1, Axis};
 
 pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
-    let mut part_numbers: Vec<u32> = Vec::new();
+    let mut part_numbers = Vec::new();
 
     let row_len = input.matches('\n').count() + 1;
     let col_len = input.find('\n').unwrap();
@@ -15,31 +15,31 @@ pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
         part_numbers.extend(
             line.split(|c: char| c == '.' || !c.is_ascii_digit())
                 .filter(|s| !s.is_empty())
-                .filter_map(|number_str| -> Option<u32> {
+                .filter_map(|number_str| {
                     let len = number_str.len();
                     let col = line.find(number_str).unwrap();
                     let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
-                    let was_symbol_found = 
+                    let was_symbol_found =
                         // row above
                         find_matrix_row(row.checked_sub(1), &matrix)
-                                .map(|row| row.iter().skip(col).take(len).any(symbol))
-                                .unwrap_or(false) ||
+                            .map(|row| row.iter().skip(col).take(len).any(symbol))
+                            .unwrap_or(false) ||
                         // row below
                         find_matrix_row(Some(row + 1), &matrix)
                             .map(|row| row.iter().skip(col).take(len).any(symbol))
                             .unwrap_or(false) ||
                         // column to the left
                         find_matrix_col(col.checked_sub(1), &matrix)
-                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(3).any(symbol))
+                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(if row == 0 {2} else {3}).any(symbol))
                             .unwrap_or(false) ||
                         // column to the right
                         find_matrix_col(Some(col + len), &matrix)
-                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(3).any(symbol))
+                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(if row == 0 {2} else {3}).any(symbol))
                             .unwrap_or(false);
                     if !was_symbol_found {
                         return None;
                     }
-                    Some(number_str.parse().unwrap())
+                    Some(number_str.parse::<u32>().unwrap())
                 }),
         );
     }
@@ -304,6 +304,44 @@ mod test {
 .*...
 ...12
 .....
+";
+
+        let actual = get_all_part_numbers(input.trim());
+
+        assert_eq!(actual, vec![]);
+    }
+    #[test]
+    fn test_20() {
+        let input = "
+...2.
+.....
+....*
+";
+
+        let actual = get_all_part_numbers(input.trim());
+
+        assert_eq!(actual, vec![]);
+    }
+
+    #[test]
+    fn test_21() {
+        let input = "
+.3...
+.....
+*....
+";
+
+        let actual = get_all_part_numbers(input.trim());
+
+        assert_eq!(actual, vec![]);
+    }
+
+    #[test]
+    fn test_22() {
+        let input = "
+*....
+.....
+.3...
 ";
 
         let actual = get_all_part_numbers(input.trim());
