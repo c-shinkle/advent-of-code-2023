@@ -6,7 +6,7 @@ pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
     let mut part_numbers = Vec::new();
 
     let row_len = input.matches('\n').count() + 1;
-    let col_len = input.find('\n').unwrap();
+    let col_len = input.find('\n').unwrap_or(input.len());
     let vec: Vec<char> = input.lines().flat_map(|line| line.chars()).collect();
 
     let matrix: Array2<char> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
@@ -36,10 +36,10 @@ pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
                         find_matrix_col(Some(col + len), &matrix)
                             .map(|col| col.iter().skip(row.saturating_sub(1)).take(if row == 0 {2} else {3}).any(symbol))
                             .unwrap_or(false);
-                    if !was_symbol_found {
-                        return None;
+                    match was_symbol_found {
+                        true => Some(number_str.parse::<u32>().unwrap()),
+                        false => None,
                     }
-                    Some(number_str.parse::<u32>().unwrap())
                 }),
         );
     }
@@ -347,5 +347,83 @@ mod test {
         let actual = get_all_part_numbers(input.trim());
 
         assert_eq!(actual, vec![]);
+    }
+
+    #[test]
+    fn test_23() {
+        let input = "
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+";
+
+        let actual = get_all_part_numbers(input.trim());
+
+        assert_eq!(actual, vec![467, 35, 633, 617, 592, 755, 664, 598]);
+    }
+
+    #[test]
+    fn test_24() {
+        let expected = vec![87, 12];
+        for c in "*/-+&=@$%#".chars() {
+            let input = format!(
+                "
+.......
+87{c}12..
+.......
+"
+            );
+
+            let actual = get_all_part_numbers(input.trim());
+
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn test_25() {
+        let input = "
+......
+.-378.
+......
+";
+
+        let actual = get_all_part_numbers(input.trim());
+
+        assert_eq!(actual, vec![378]);
+    }
+
+    #[test]
+    fn test_26() {
+        let input = "
+12.......*..
++.........34
+.......-12..
+..78........
+..*....60...
+78.........9
+.5.....23..$
+8...90*12...
+............
+2.2......12.
+.*.........*
+1.1..503+.56
+";
+
+        let actual = get_all_part_numbers(input.trim());
+        assert_eq!(
+            actual,
+            vec![12, 34, 12, 78, 78, 9, 23, 90, 12, 2, 2, 12, 1, 1, 503, 56]
+        );
+
+        let sum: u32 = actual.iter().sum();
+        assert_eq!(sum, 925);
     }
 }
