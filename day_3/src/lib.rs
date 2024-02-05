@@ -1,9 +1,10 @@
 pub mod input;
 
 use ndarray::{Array2, ArrayView1, Axis};
+use regex::Regex;
 
 pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
-    let mut part_numbers = Vec::new();
+    let mut part_numbers: Vec<u32> = Vec::new();
 
     let row_len = input.matches('\n').count() + 1;
     let col_len = input.find('\n').unwrap_or(input.len());
@@ -11,37 +12,46 @@ pub fn get_all_part_numbers(input: &str) -> Vec<u32> {
 
     let matrix: Array2<char> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
 
+    let regex = Regex::new(r"(\d+)").unwrap();
+
     for (row, line) in input.lines().enumerate() {
-        part_numbers.extend(
-            line.split(|c: char| c == '.' || !c.is_ascii_digit())
-                .filter(|s| !s.is_empty())
-                .filter_map(|number_str| {
-                    let len = number_str.len();
-                    let col = line.find(number_str).unwrap();
-                    let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
-                    let was_symbol_found =
-                        // row above
-                        find_matrix_row(row.checked_sub(1), &matrix)
-                            .map(|row| row.iter().skip(col).take(len).any(symbol))
-                            .unwrap_or(false) ||
-                        // row below
-                        find_matrix_row(Some(row + 1), &matrix)
-                            .map(|row| row.iter().skip(col).take(len).any(symbol))
-                            .unwrap_or(false) ||
-                        // column to the left
-                        find_matrix_col(col.checked_sub(1), &matrix)
-                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(if row == 0 {2} else {3}).any(symbol))
-                            .unwrap_or(false) ||
-                        // column to the right
-                        find_matrix_col(Some(col + len), &matrix)
-                            .map(|col| col.iter().skip(row.saturating_sub(1)).take(if row == 0 {2} else {3}).any(symbol))
-                            .unwrap_or(false);
-                    match was_symbol_found {
-                        true => Some(number_str.parse::<u32>().unwrap()),
-                        false => None,
-                    }
-                }),
-        );
+        for capture in regex.find_iter(line) {
+            let col = capture.start();
+            let number_str = capture.as_str();
+
+            let len = number_str.len();
+            let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
+            let mut was_symbol_found = false;
+            // row above
+            was_symbol_found |= find_matrix_row(row.checked_sub(1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            // row below
+            was_symbol_found |= find_matrix_row(Some(row + 1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            // column to the left
+            was_symbol_found |= find_matrix_col(col.checked_sub(1), &matrix)
+                .map(|col| {
+                    col.iter()
+                        .skip(row.saturating_sub(1))
+                        .take(if row == 0 { 2 } else { 3 })
+                        .any(symbol)
+                })
+                .unwrap_or(false);
+            // column to the right
+            was_symbol_found |= find_matrix_col(Some(col + len), &matrix)
+                .map(|col| {
+                    col.iter()
+                        .skip(row.saturating_sub(1))
+                        .take(if row == 0 { 2 } else { 3 })
+                        .any(symbol)
+                })
+                .unwrap_or(false);
+            if was_symbol_found {
+                part_numbers.push(number_str.parse::<u32>().unwrap());
+            }
+        }
     }
 
     part_numbers
@@ -63,294 +73,11 @@ fn find_matrix_col(i: Option<usize>, matrix: &Array2<char>) -> Option<ArrayView1
 
 #[cfg(test)]
 mod test {
+    use crate::input::INPUT;
+
     use super::*;
-
     #[test]
-    fn test_01() {
-        let input = "
-..*..
-.234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_02() {
-        let input = "
-.....
-.234.
-..*..
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_03() {
-        let input = "
-.....
-*234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_04() {
-        let input = "
-.....
-.234*
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_05() {
-        let input = "
-*....
-.234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_06() {
-        let input = "
-....*
-.234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_07() {
-        let input = "
-.....
-.234.
-*....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_08() {
-        let input = "
-.....
-.234.
-....*
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-
-    #[test]
-    fn test_09() {
-        let input = "
-.....
-.2!3.
-.....
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![2, 3]);
-    }
-
-    #[test]
-    fn test_10() {
-        let input = "
-.2!3.
-.....
-.....
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![2, 3]);
-    }
-
-    #[test]
-    fn test_11() {
-        let input = "
-.....
-.....
-.....
-.2!3.
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![2, 3]);
-    }
-
-    #[test]
-    fn test_12() {
-        let input = "
-.....
-2....
-!....
-3....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![2, 3]);
-    }
-
-    #[test]
-    fn test_13() {
-        let input = "
-......
-......
-...*..
-.12.3.
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![12, 3]);
-    }
-    #[test]
-    fn test_14() {
-        let input = "
-.*...
-.234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-    #[test]
-    fn test_15() {
-        let input = "
-...*.
-.234.
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-    #[test]
-    fn test_16() {
-        let input = "
-.....
-.234.
-.*...
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-    #[test]
-    fn test_17() {
-        let input = "
-.....
-.234.
-...*.
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![234]);
-    }
-    #[test]
-    fn test_18() {
-        let input = "
-.....
-...12
-..*..
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![12]);
-    }
-    #[test]
-    fn test_19() {
-        let input = "
-.*...
-...12
-.....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![]);
-    }
-    #[test]
-    fn test_20() {
-        let input = "
-...2.
-.....
-....*
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![]);
-    }
-
-    #[test]
-    fn test_21() {
-        let input = "
-.3...
-.....
-*....
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![]);
-    }
-
-    #[test]
-    fn test_22() {
-        let input = "
-*....
-.....
-.3...
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![]);
-    }
-
-    #[test]
-    fn test_23() {
+    fn test_all_edge_cases() {
         let input = "
 467..114..
 ...*......
@@ -362,68 +89,21 @@ mod test {
 ......755.
 ...$.*....
 .664.598..
+......&...
+.2...2....
 ";
 
         let actual = get_all_part_numbers(input.trim());
 
-        assert_eq!(actual, vec![467, 35, 633, 617, 592, 755, 664, 598]);
+        assert_eq!(actual, vec![467, 35, 633, 617, 592, 755, 664, 598, 2]);
     }
 
     #[test]
-    fn test_24() {
-        let expected = vec![87, 12];
-        for c in "*/-+&=@$%#".chars() {
-            let input = format!(
-                "
-.......
-87{c}12..
-.......
-"
-            );
+    fn test_real_input() {
+        let input = INPUT;
 
-            let actual = get_all_part_numbers(input.trim());
+        let actual: u32 = get_all_part_numbers(input.trim()).iter().sum();
 
-            assert_eq!(actual, expected);
-        }
-    }
-
-    #[test]
-    fn test_25() {
-        let input = "
-......
-.-378.
-......
-";
-
-        let actual = get_all_part_numbers(input.trim());
-
-        assert_eq!(actual, vec![378]);
-    }
-
-    #[test]
-    fn test_26() {
-        let input = "
-12.......*..
-+.........34
-.......-12..
-..78........
-..*....60...
-78.........9
-.5.....23..$
-8...90*12...
-............
-2.2......12.
-.*.........*
-1.1..503+.56
-";
-
-        let actual = get_all_part_numbers(input.trim());
-        assert_eq!(
-            actual,
-            vec![12, 34, 12, 78, 78, 9, 23, 90, 12, 2, 2, 12, 1, 1, 503, 56]
-        );
-
-        let sum: u32 = actual.iter().sum();
-        assert_eq!(sum, 925);
+        assert_eq!(actual, 530495);
     }
 }
