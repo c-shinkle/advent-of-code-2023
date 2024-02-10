@@ -1,6 +1,6 @@
 pub mod input;
 
-use ndarray::{Array2, ArrayView1, Axis};
+use ndarray::{Array, Array2, ArrayView1, Axis};
 use regex::Regex;
 
 pub fn get_all_part_numbers_func(mut input: &str) -> u32 {
@@ -8,8 +8,8 @@ pub fn get_all_part_numbers_func(mut input: &str) -> u32 {
     input = input.trim();
     let row_len = input.matches('\n').count() + 1;
     let col_len = input.find('\n').unwrap_or(input.len());
-    let vec: Vec<char> = input.lines().flat_map(|line| line.chars()).collect();
-    let matrix: Array2<char> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
+    let vec: Vec<u8> = input.lines().flat_map(|line| line.bytes()).collect();
+    let matrix: Array2<u8> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
     input
         .lines()
         .enumerate()
@@ -17,20 +17,20 @@ pub fn get_all_part_numbers_func(mut input: &str) -> u32 {
         .map(|(row, capture)| {
             let col = capture.start();
             let len = capture.len();
-            let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
+            let symbol = |byte: &u8| !byte.is_ascii_digit() && *byte != b'.';
             let skip = row.saturating_sub(1);
             let take = if row == 0 { 2 } else { 3 };
 
-            let row_above = find_matrix_row(row.checked_sub(1), &matrix)
+            let row_above = find_byte_matrix_row(row.checked_sub(1), &matrix)
                 .map(|row| row.iter().skip(col).take(len).any(symbol))
                 .unwrap_or(false);
-            let row_below = find_matrix_row(Some(row + 1), &matrix)
+            let row_below = find_byte_matrix_row(Some(row + 1), &matrix)
                 .map(|row| row.iter().skip(col).take(len).any(symbol))
                 .unwrap_or(false);
-            let col_left = find_matrix_col(col.checked_sub(1), &matrix)
+            let col_left = find_byte_matrix_col(col.checked_sub(1), &matrix)
                 .map(|col| col.iter().skip(skip).take(take).any(symbol))
                 .unwrap_or(false);
-            let col_right = find_matrix_col(Some(col + len), &matrix)
+            let col_right = find_byte_matrix_col(Some(col + len), &matrix)
                 .map(|col| col.iter().skip(skip).take(take).any(symbol))
                 .unwrap_or(false);
 
@@ -48,26 +48,28 @@ pub fn get_all_part_numbers_impr(mut input: &str) -> u32 {
     input = input.trim();
     let row_len = input.matches('\n').count() + 1;
     let col_len = input.find('\n').unwrap_or(input.len());
-    let vec: Vec<char> = input.lines().flat_map(|line| line.chars()).collect();
-    let matrix: Array2<char> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
+    let mut matrix: Array2<u8> = Array::zeros((row_len, col_len));
+    for (i, line) in input.lines().enumerate() {
+        matrix.row_mut(i).assign(&Array::from_iter(line.bytes()));
+    }
     for (row, line) in input.lines().enumerate() {
         for capture in regex.find_iter(line) {
             let col = capture.start();
             let len = capture.len();
-            let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
+            let symbol = |byte: &u8| !byte.is_ascii_digit() && *byte != b'.';
             let skip = row.saturating_sub(1);
             let take = if row == 0 { 2 } else { 3 };
 
-            let row_above = find_matrix_row(row.checked_sub(1), &matrix)
+            let row_above = find_byte_matrix_row(row.checked_sub(1), &matrix)
                 .map(|row| row.iter().skip(col).take(len).any(symbol))
                 .unwrap_or(false);
-            let row_below = find_matrix_row(Some(row + 1), &matrix)
+            let row_below = find_byte_matrix_row(Some(row + 1), &matrix)
                 .map(|row| row.iter().skip(col).take(len).any(symbol))
                 .unwrap_or(false);
-            let col_left = find_matrix_col(col.checked_sub(1), &matrix)
+            let col_left = find_byte_matrix_col(col.checked_sub(1), &matrix)
                 .map(|col| col.iter().skip(skip).take(take).any(symbol))
                 .unwrap_or(false);
-            let col_right = find_matrix_col(Some(col + len), &matrix)
+            let col_right = find_byte_matrix_col(Some(col + len), &matrix)
                 .map(|col| col.iter().skip(skip).take(take).any(symbol))
                 .unwrap_or(false);
 
@@ -79,14 +81,14 @@ pub fn get_all_part_numbers_impr(mut input: &str) -> u32 {
     sum
 }
 
-fn find_matrix_row(i: Option<usize>, matrix: &Array2<char>) -> Option<ArrayView1<char>> {
+fn find_byte_matrix_row(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayView1<u8>> {
     if i? >= matrix.len_of(Axis(0)) {
         return None;
     }
     Some(matrix.row(i?))
 }
 
-fn find_matrix_col(i: Option<usize>, matrix: &Array2<char>) -> Option<ArrayView1<char>> {
+fn find_byte_matrix_col(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayView1<u8>> {
     if i? >= matrix.len_of(Axis(1)) {
         return None;
     }
