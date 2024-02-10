@@ -8,3 +8,7 @@ edition = "2021"
 [dependencies]
 ndarray = "0.15.6"
 regex = "1.10.3"
+
+[profile.release]
+debug = true
+lto = true
