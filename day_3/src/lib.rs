@@ -3,51 +3,43 @@ pub mod input;
 use ndarray::{Array2, ArrayView1, Axis};
 use regex::Regex;
 
-pub fn get_all_part_numbers(mut input: &str) -> Vec<u32> {
+pub fn get_all_part_numbers(mut input: &str) -> u32 {
+    let regex = Regex::new(r"(\d+)").unwrap();
     input = input.trim();
-    let mut part_numbers: Vec<u32> = Vec::new();
-
     let row_len = input.matches('\n').count() + 1;
     let col_len = input.find('\n').unwrap_or(input.len());
     let vec: Vec<char> = input.lines().flat_map(|line| line.chars()).collect();
-
     let matrix: Array2<char> = Array2::from_shape_vec((row_len, col_len), vec).unwrap();
-
-    let regex = Regex::new(r"(\d+)").unwrap();
-
-    for (row, line) in input.lines().enumerate() {
-        for capture in regex.find_iter(line) {
+    input
+        .lines()
+        .enumerate()
+        .flat_map(|(row, line)| regex.find_iter(line).map(move |capture| (row, capture)))
+        .map(|(row, capture)| {
             let col = capture.start();
-            let number_str = capture.as_str();
-
-            let len = number_str.len();
+            let len = capture.len();
             let symbol = |c: &char| !c.is_ascii_digit() && *c != '.';
-            let mut was_symbol_found = false;
-            // row above
-            if let Some(row) = find_matrix_row(row.checked_sub(1), &matrix) {
-                was_symbol_found |= row.iter().skip(col).take(len).any(symbol);
-            }
-            // row below
-            if let Some(row) = find_matrix_row(Some(row + 1), &matrix) {
-                was_symbol_found |= row.iter().skip(col).take(len).any(symbol);
-            }
-            // column to the left
             let skip = row.saturating_sub(1);
             let take = if row == 0 { 2 } else { 3 };
-            if let Some(col) = find_matrix_col(col.checked_sub(1), &matrix) {
-                was_symbol_found |= col.iter().skip(skip).take(take).any(symbol);
-            }
-            // column to the right
-            if let Some(col) = find_matrix_col(Some(col + len), &matrix) {
-                was_symbol_found |= col.iter().skip(skip).take(take).any(symbol);
-            }
-            if was_symbol_found {
-                part_numbers.push(number_str.parse::<u32>().unwrap());
-            }
-        }
-    }
 
-    part_numbers
+            let row_above = find_matrix_row(row.checked_sub(1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            let row_below = find_matrix_row(Some(row + 1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            let col_left = find_matrix_col(col.checked_sub(1), &matrix)
+                .map(|col| col.iter().skip(skip).take(take).any(symbol))
+                .unwrap_or(false);
+            let col_right = find_matrix_col(Some(col + len), &matrix)
+                .map(|col| col.iter().skip(skip).take(take).any(symbol))
+                .unwrap_or(false);
+
+            if !(row_above || row_below || col_left || col_right) {
+                return 0;
+            }
+            capture.as_str().parse::<u32>().unwrap()
+        })
+        .sum()
 }
 
 fn find_matrix_row(i: Option<usize>, matrix: &Array2<char>) -> Option<ArrayView1<char>> {
@@ -88,14 +80,14 @@ mod test {
 
         let actual = get_all_part_numbers(input);
 
-        assert_eq!(actual, vec![467, 35, 633, 617, 592, 755, 664, 598, 2]);
+        assert_eq!(actual, 4363);
     }
 
     #[test]
     fn test_real_input() {
         let input = INPUT;
 
-        let actual: u32 = get_all_part_numbers(input).iter().sum();
+        let actual: u32 = get_all_part_numbers(input);
 
         assert_eq!(actual, 530495);
     }
