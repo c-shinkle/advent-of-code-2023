@@ -81,6 +81,52 @@ pub fn get_all_part_numbers_impr(mut input: &str) -> u32 {
     sum
 }
 
+pub fn no_regex(mut input: &str) -> u32 {
+    let mut sum = u32::default();
+    input = input.trim();
+    let row_len = input.matches('\n').count() + 1;
+    let col_len = input.find('\n').unwrap_or(input.len());
+    let mut matrix: Array2<u8> = Array::zeros((row_len, col_len));
+    for (i, line) in input.lines().enumerate() {
+        matrix.row_mut(i).assign(&Array::from_iter(line.bytes()));
+    }
+    for (row, line) in input.lines().enumerate() {
+        let mut previous_byte_offset = 0;
+        for part_str in line
+            .split(|c: char| c == '.' || !c.is_ascii_digit())
+            .filter(|s| !s.is_empty())
+        {
+            let len = part_str.len();
+            let substring = &line[previous_byte_offset..line.len()];
+            let col = substring.find(part_str).unwrap() + previous_byte_offset;
+            previous_byte_offset = col + len;
+
+            let symbol = |byte: &u8| !byte.is_ascii_digit() && *byte != b'.';
+            let skip = row.saturating_sub(1);
+            let take = if row == 0 { 2 } else { 3 };
+
+            let row_above = find_byte_matrix_row(row.checked_sub(1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            let row_below = find_byte_matrix_row(Some(row + 1), &matrix)
+                .map(|row| row.iter().skip(col).take(len).any(symbol))
+                .unwrap_or(false);
+            let col_left = find_byte_matrix_col(col.checked_sub(1), &matrix)
+                .map(|col| col.iter().skip(skip).take(take).any(symbol))
+                .unwrap_or(false);
+            let col_right = find_byte_matrix_col(Some(col + len), &matrix)
+                .map(|col| col.iter().skip(skip).take(take).any(symbol))
+                .unwrap_or(false);
+
+            if row_above || row_below || col_left || col_right {
+                sum += part_str.parse::<u32>().unwrap();
+            }
+        }
+    }
+    sum
+}
+
+#[inline(always)]
 fn find_byte_matrix_row(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayView1<u8>> {
     if i? >= matrix.len_of(Axis(0)) {
         return None;
@@ -88,6 +134,7 @@ fn find_byte_matrix_row(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayVi
     Some(matrix.row(i?))
 }
 
+#[inline(always)]
 fn find_byte_matrix_col(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayView1<u8>> {
     if i? >= matrix.len_of(Axis(1)) {
         return None;
@@ -158,6 +205,42 @@ mod test {
         let input = INPUT;
 
         let actual: u32 = get_all_part_numbers_impr(input);
+
+        assert_eq!(actual, 530495);
+    }
+
+    #[test]
+    fn no_regex_all_edge_cases() {
+        let input = "
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+......&...
+.2...2....
+";
+
+        let actual = no_regex(input);
+
+        assert_eq!(
+            actual,
+            vec![467, 35, 633, 617, 592, 755, 664, 598, 2]
+                .iter()
+                .sum::<u32>()
+        );
+    }
+
+    #[test]
+    fn no_regex_real_input() {
+        let input = INPUT;
+
+        let actual = no_regex(input);
 
         assert_eq!(actual, 530495);
     }
