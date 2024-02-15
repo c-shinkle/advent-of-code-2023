@@ -135,30 +135,16 @@ pub fn no_matrix(mut input: &str) -> u32 {
         for capture in regex.find_iter(line) {
             let col_index = capture.start();
             let len = capture.len();
-            let symbol = |byte: &u8| !byte.is_ascii_digit() && *byte != b'.';
             let skip = row_index.saturating_sub(1);
             let take = if row_index == 0 { 2 } else { 3 };
 
             let row_above =
-                does_row_contain_symbol(row_index.checked_sub(1), col_index, &matrix, take);
-            let row_below = does_row_contain_symbol(Some(row_index + 1), col_index, &matrix, take);
-            let col_left = col_index
-                .checked_sub(1)
-                .map(|col_index| {
-                    matrix
-                        .iter()
-                        .skip(skip)
-                        .take(take)
-                        .filter_map(|row| row.get(col_index))
-                        .any(symbol)
-                })
+                does_row_contain_symbol(row_index.checked_sub(1), col_index, &matrix, take)
+                    .unwrap_or(false);
+            let row_below = does_row_contain_symbol(Some(row_index + 1), col_index, &matrix, take)
                 .unwrap_or(false);
-            let col_right = matrix
-                .iter()
-                .skip(skip)
-                .take(take)
-                .filter_map(|row| row.get(col_index + len))
-                .any(symbol);
+            let col_left = does_col_contain_symbol(col_index.checked_sub(1), &matrix, skip, take);
+            let col_right = does_col_contain_symbol(Some(col_index + len), &matrix, skip, take);
 
             if row_above || row_below || col_left || col_right {
                 sum += capture.as_str().parse::<u32>().unwrap();
@@ -190,38 +176,34 @@ fn does_row_contain_symbol(
     col_index: usize,
     matrix: &[Vec<u8>],
     take: usize,
+) -> Option<bool> {
+    Some(
+        matrix
+            .get(row_index?)?
+            .iter()
+            .skip(col_index)
+            .take(take)
+            .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.'),
+    )
+}
+
+#[inline(always)]
+fn does_col_contain_symbol(
+    col_index: Option<usize>,
+    matrix: &[Vec<u8>],
+    skip: usize,
+    take: usize,
 ) -> bool {
-    match row_index {
-        Some(row_index) => matrix
-            .get(row_index)
-            .map(|row| {
-                row.iter()
-                    .skip(col_index)
-                    .take(take)
-                    .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.')
-            })
-            .unwrap_or(false),
+    match col_index {
+        Some(col_index) => matrix
+            .iter()
+            .skip(skip)
+            .take(take)
+            .filter_map(|row| row.get(col_index))
+            .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.'),
         None => false,
     }
 }
-
-// #[inline(always)]
-// fn does_col_contain_symbol(
-//     col_index: Option<usize>,
-//     matrix: &[Vec<u8>],
-//     take: usize,
-//     number_str_len: usize,
-// ) -> bool {
-//     match col_index {
-//         Some(col_index) => matrix
-//             .iter()
-//             .skip(col_index)
-//             .take(take)
-//             .filter_map(|row| row.get(col_index + number_str_len))
-//             .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.'),
-//         None => false,
-//     }
-// }
 
 #[cfg(test)]
 mod test {
