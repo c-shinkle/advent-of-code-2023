@@ -126,6 +126,48 @@ pub fn no_regex(mut input: &str) -> u32 {
     sum
 }
 
+pub fn no_matrix(mut input: &str) -> u32 {
+    let mut sum = u32::default();
+    let regex = Regex::new(r"(\d+)").unwrap();
+    input = input.trim();
+    let matrix: Vec<Vec<u8>> = input.lines().map(|line| line.bytes().collect()).collect();
+    for (row_index, line) in input.lines().enumerate() {
+        for capture in regex.find_iter(line) {
+            let col_index = capture.start();
+            let len = capture.len();
+            let symbol = |byte: &u8| !byte.is_ascii_digit() && *byte != b'.';
+            let skip = row_index.saturating_sub(1);
+            let take = if row_index == 0 { 2 } else { 3 };
+
+            let row_above =
+                does_row_contain_symbol(row_index.checked_sub(1), col_index, &matrix, take);
+            let row_below = does_row_contain_symbol(Some(row_index + 1), col_index, &matrix, take);
+            let col_left = col_index
+                .checked_sub(1)
+                .map(|col_index| {
+                    matrix
+                        .iter()
+                        .skip(skip)
+                        .take(take)
+                        .filter_map(|row| row.get(col_index))
+                        .any(symbol)
+                })
+                .unwrap_or(false);
+            let col_right = matrix
+                .iter()
+                .skip(skip)
+                .take(take)
+                .filter_map(|row| row.get(col_index + len))
+                .any(symbol);
+
+            if row_above || row_below || col_left || col_right {
+                sum += capture.as_str().parse::<u32>().unwrap();
+            }
+        }
+    }
+    sum
+}
+
 #[inline(always)]
 fn find_byte_matrix_row(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayView1<u8>> {
     if i? >= matrix.len_of(Axis(0)) {
@@ -141,6 +183,45 @@ fn find_byte_matrix_col(i: Option<usize>, matrix: &Array2<u8>) -> Option<ArrayVi
     }
     Some(matrix.column(i?))
 }
+
+#[inline(always)]
+fn does_row_contain_symbol(
+    row_index: Option<usize>,
+    col_index: usize,
+    matrix: &[Vec<u8>],
+    take: usize,
+) -> bool {
+    match row_index {
+        Some(row_index) => matrix
+            .get(row_index)
+            .map(|row| {
+                row.iter()
+                    .skip(col_index)
+                    .take(take)
+                    .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.')
+            })
+            .unwrap_or(false),
+        None => false,
+    }
+}
+
+// #[inline(always)]
+// fn does_col_contain_symbol(
+//     col_index: Option<usize>,
+//     matrix: &[Vec<u8>],
+//     take: usize,
+//     number_str_len: usize,
+// ) -> bool {
+//     match col_index {
+//         Some(col_index) => matrix
+//             .iter()
+//             .skip(col_index)
+//             .take(take)
+//             .filter_map(|row| row.get(col_index + number_str_len))
+//             .any(|byte: &u8| !byte.is_ascii_digit() && *byte != b'.'),
+//         None => false,
+//     }
+// }
 
 #[cfg(test)]
 mod test {
@@ -241,6 +322,42 @@ mod test {
         let input = INPUT;
 
         let actual = no_regex(input);
+
+        assert_eq!(actual, 530495);
+    }
+
+    #[test]
+    fn no_matrix_all_edge_cases() {
+        let input = "
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+......&...
+.2...2....
+";
+
+        let actual = no_matrix(input);
+
+        assert_eq!(
+            actual,
+            vec![467, 35, 633, 617, 592, 755, 664, 598, 2]
+                .iter()
+                .sum::<u32>()
+        );
+    }
+
+    #[test]
+    fn no_matrix_real_input() {
+        let input = INPUT;
+
+        let actual = no_matrix(input);
 
         assert_eq!(actual, 530495);
     }
