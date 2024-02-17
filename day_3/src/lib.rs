@@ -126,7 +126,7 @@ pub fn no_regex(mut input: &str) -> u32 {
     sum
 }
 
-pub fn no_matrix(mut input: &str) -> u32 {
+pub fn no_ndarray(mut input: &str) -> u32 {
     let mut sum = 0;
     let regex = Regex::new(r"(\d+)").unwrap();
     input = input.trim();
@@ -155,7 +155,7 @@ pub fn no_matrix(mut input: &str) -> u32 {
     sum
 }
 
-pub fn no_matrix_or_regex(mut input: &str) -> u32 {
+pub fn no_ndarray_or_regex(mut input: &str) -> u32 {
     let mut sum = 0;
     input = input.trim();
     let matrix: Vec<Vec<u8>> = input.lines().map(|line| line.bytes().collect()).collect();
@@ -342,7 +342,7 @@ mod test {
     }
 
     #[test]
-    fn no_matrix_all_edge_cases() {
+    fn no_ndarray_all_edge_cases() {
         let input = "
 467..114..
 ...*......
@@ -358,7 +358,7 @@ mod test {
 .2...2....
 ";
 
-        let actual = no_matrix(input);
+        let actual = no_ndarray(input);
 
         assert_eq!(
             actual,
@@ -369,16 +369,16 @@ mod test {
     }
 
     #[test]
-    fn no_matrix_real_input() {
+    fn no_ndarray_real_input() {
         let input = INPUT;
 
-        let actual = no_matrix(input);
+        let actual = no_ndarray(input);
 
         assert_eq!(actual, 530495);
     }
 
     #[test]
-    fn no_matrix_or_regex_all_edge_cases() {
+    fn no_ndarray_or_regex_all_edge_cases() {
         let input = "
 467..114..
 ...*......
@@ -394,7 +394,7 @@ mod test {
 .2...2....
 ";
 
-        let actual = no_matrix_or_regex(input);
+        let actual = no_ndarray_or_regex(input);
 
         assert_eq!(
             actual,
@@ -405,10 +405,10 @@ mod test {
     }
 
     #[test]
-    fn no_matrix_or_regex_real_input() {
+    fn no_ndarray_or_regex_real_input() {
         let input = INPUT;
 
-        let actual = no_matrix_or_regex(input);
+        let actual = no_ndarray_or_regex(input);
 
         assert_eq!(actual, 530495);
     }

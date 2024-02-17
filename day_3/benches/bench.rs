@@ -42,22 +42,22 @@ mod tests {
     }
 
     #[bench]
-    fn no_matrix_bench(b: &mut Bencher) {
+    fn no_ndarray_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {
-            sum = black_box(no_matrix(INPUT));
+            sum = black_box(no_ndarray(INPUT));
         });
 
         assert_eq!(sum, 530495);
     }
 
     #[bench]
-    fn no_matrix_or_regex_bench(b: &mut Bencher) {
+    fn no_ndarray_or_regex_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {
-            sum = black_box(no_matrix_or_regex(INPUT));
+            sum = black_box(no_ndarray_or_regex(INPUT));
         });
 
         assert_eq!(sum, 530495);
