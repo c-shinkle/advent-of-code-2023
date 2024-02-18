@@ -62,4 +62,15 @@ mod tests {
 
         assert_eq!(sum, 530495);
     }
+
+    #[bench]
+    fn no_vecs_or_ndarray_or_regex_bench(b: &mut Bencher) {
+        let mut sum = u32::default();
+
+        b.iter(|| {
+            sum = black_box(no_vecs_or_ndarray_or_regex::<140, 140>(INPUT));
+        });
+
+        assert_eq!(sum, 530495);
+    }
 }
