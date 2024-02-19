@@ -58,10 +58,9 @@ pub fn no_vecs_or_ndarray_or_regex<const ROW_SIZE: usize, const COL_SIZE: usize>
             .split(|c: char| c == '.' || !c.is_ascii_digit())
             .filter(|s| !s.is_empty())
         {
-            let len = part_str.len();
             let substring = &line[previous_byte_offset..line.len()];
             let col_index = substring.find(part_str).unwrap() + previous_byte_offset;
-            previous_byte_offset = col_index + len;
+            previous_byte_offset = col_index + part_str.len();
             let skip = row_index.saturating_sub(1);
             let take = if row_index == 0 { 2 } else { 3 };
 
@@ -88,7 +87,7 @@ pub fn no_vecs_or_ndarray_or_regex<const ROW_SIZE: usize, const COL_SIZE: usize>
             .unwrap_or(false);
             let col_right = col_symbol_const::<ROW_SIZE, COL_SIZE>(
                 &matrix,
-                col_index.checked_add(len),
+                col_index.checked_add(part_str.len()),
                 skip,
                 take,
             )
