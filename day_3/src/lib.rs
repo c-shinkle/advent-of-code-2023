@@ -156,7 +156,7 @@ mod test {
 
     use super::*;
     #[test]
-    fn test_all_edge_cases() {
+    fn functional_all_edge_cases() {
         let input = "
 467..114..
 ...*......
@@ -178,7 +178,7 @@ mod test {
     }
 
     #[test]
-    fn test_real_input() {
+    fn functional_real_input() {
         let input = INPUT;
 
         let actual: u32 = get_all_part_numbers_func(input);
