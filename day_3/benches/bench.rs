@@ -4,8 +4,11 @@ extern crate test;
 
 #[cfg(test)]
 mod tests {
-    use day_3::input::INPUT;
-    use day_3::*;
+    use day_3::{
+        all_parts::{get_all_part_numbers_func, no_vecs_or_ndarray_or_regex},
+        gear_ratio::get_all_gear_ratios_func,
+        input::INPUT,
+    };
     use test::{black_box, Bencher};
 
     #[bench]
@@ -28,5 +31,16 @@ mod tests {
         });
 
         assert_eq!(sum, 530495);
+    }
+
+    #[bench]
+    fn get_all_gear_ratios_func_bench(b: &mut Bencher) {
+        let mut sum = u32::default();
+
+        b.iter(|| {
+            sum = black_box(get_all_gear_ratios_func(INPUT));
+        });
+
+        assert_eq!(sum, 80253814);
     }
 }
