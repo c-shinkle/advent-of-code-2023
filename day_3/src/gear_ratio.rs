@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use regex::Regex;
-
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 struct Location {
     start: usize,
@@ -11,31 +9,33 @@ struct Location {
 }
 
 pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
-    let digit_regex = Regex::new(r"(\d+)").unwrap();
     input = input.trim();
-    let matrix: Vec<&str> = input.lines().collect();
-    let all_locations: Vec<Location> = input
-        .lines()
-        .enumerate()
-        .flat_map(|(row, line)| {
-            digit_regex
-                .find_iter(line)
-                .map(move |capture| (row, capture))
-        })
-        .map(|(row, capture)| Location {
-            start: capture.start(),
-            end: capture.end(),
-            row,
-        })
-        .collect();
-    let asterisk_regex = Regex::new(r"(\*)").unwrap();
+    let mut all_locations: Vec<Location> = Vec::new();
+    for (row, line) in input.lines().enumerate() {
+        let mut previous_byte_offset = 0;
+        for part_str in line
+            .split(|c: char| !c.is_ascii_digit())
+            .filter(|s| !s.is_empty())
+        {
+            let substring = &line[previous_byte_offset..line.len()];
+            let start = substring.find(part_str).unwrap() + previous_byte_offset;
+            previous_byte_offset = start + part_str.len();
+            all_locations.push(Location {
+                start,
+                end: start + part_str.len(),
+                row,
+            });
+        }
+    }
+
+    let lines: Vec<&str> = input.lines().collect();
     input
         .lines()
         .enumerate()
         .flat_map(|(row, line)| {
-            asterisk_regex
-                .find_iter(line)
-                .map(move |capture| (row, capture.start()))
+            line
+                .match_indices('*')
+                .map(move |(index, _)| (row, index))
         })
         .map(|(asterisk_row, asterisk_col)| {
             let mut set: HashSet<Location> = HashSet::new();
@@ -71,12 +71,12 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
                     let mut set_iter = set.into_iter();
 
                     let first_number_location = set_iter.next().unwrap();
-                    let first_number_row = matrix[first_number_location.row];
+                    let first_number_row = lines[first_number_location.row];
                     let first_number_str = &first_number_row[first_number_location.start..first_number_location.end];
                     let first_number = first_number_str.parse::<u32>().unwrap();
 
                     let second_number_location = set_iter.next().unwrap();
-                    let second_number_row = matrix[second_number_location.row];
+                    let second_number_row = lines[second_number_location.row];
                     let second_number_str = &second_number_row[second_number_location.start..second_number_location.end];
                     let second_number = second_number_str.parse::<u32>().unwrap();
 
