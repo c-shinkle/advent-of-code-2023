@@ -1,16 +1,15 @@
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 struct Location {
-    start: usize,
-    end: usize,
-    row: usize,
+    start: u16,
+    end: u16,
+    row: u16,
 }
 
 pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
     input = input.trim();
-    let mut all_locations: HashMap<(usize, usize), Location> = HashMap::new();
+    let mut all_locations = HashMap::new();
     for (row, line) in input.lines().enumerate() {
         let mut previous_byte_offset = 0;
         for part_str in line
@@ -20,7 +19,10 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
             let substring = &line[previous_byte_offset..line.len()];
             let start = substring.find(part_str).unwrap() + previous_byte_offset;
             previous_byte_offset = start + part_str.len();
-            let end = start + part_str.len();
+
+            let start = start as u16;
+            let end = start + part_str.len() as u16;
+            let row = row as u16;
             let location = Location { start, end, row };
             for i in start..end {
                 all_locations.insert((row, i), location);
@@ -28,15 +30,17 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
         }
     }
 
-    let lines: Vec<&str> = input.lines().collect();
+    let rows: Vec<&str> = input.lines().collect();
 
     let mut sum = 0;
-    for (asterisk_row, asterisk_col) in lines
-        .iter()
-        .enumerate()
-        .flat_map(|(row, line)| line.match_indices('*').map(move |(index, _)| (row, index)))
-    {
-        let set: HashSet<&Location> = [
+    for (asterisk_row, asterisk_col) in rows.iter().enumerate().flat_map(|(row, line)| {
+        line.match_indices('*')
+            .map(move |(index, _)| (row as u16, index as u16))
+    }) {
+        let mut first: Option<Location> = None;
+        let mut second: Option<Location> = None;
+
+        let filtered_adjacent_locations = [
             (Some(asterisk_row), asterisk_col.checked_add(1)),
             (asterisk_row.checked_sub(1), asterisk_col.checked_add(1)),
             (asterisk_row.checked_sub(1), Some(asterisk_col)),
@@ -48,27 +52,31 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
         ]
         .into_iter()
         .filter_map(|(row, col)| all_locations.get(&(row?, col?)))
-        .collect();
+        .copied();
 
-        match set.len().cmp(&2) {
-            Ordering::Less => {}
-            Ordering::Equal => {
-                let mut set_iter = set.into_iter();
-
-                let Location { row, start, end } = *set_iter.next().unwrap();
-                let first_number_str = &lines[row][start..end];
-                let first_number = first_number_str.parse::<u32>().unwrap();
-
-                let Location { row, start, end } = *set_iter.next().unwrap();
-                let second_number_str = &lines[row][start..end];
-                let second_number = second_number_str.parse::<u32>().unwrap();
-
-                sum += first_number * second_number;
+        for location in filtered_adjacent_locations {
+            if first.is_none() {
+                first = Some(location);
+            } else if first.unwrap() != location {
+                second = Some(location);
+                break;
             }
-            Ordering::Greater => unreachable!(),
+        }
+
+        if let (Some(first), Some(second)) = (first, second) {
+            let first_number = rows[first.row as usize]
+                [(first.start as usize)..(first.end as usize)]
+                .parse::<u32>()
+                .unwrap();
+
+            let second_number = rows[second.row as usize]
+                [(second.start as usize)..(second.end as usize)]
+                .parse::<u32>()
+                .unwrap();
+
+            sum += first_number * second_number;
         }
     }
-
     sum
 }
 
