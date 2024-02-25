@@ -1,16 +1,22 @@
+// use cond_utils::Between;
 use std::collections::HashMap;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-struct Location {
-    start: u16,
-    end: u16,
-    row: u16,
-}
+// #[derive(PartialEq, Eq, Hash, Clone, Copy)]
+// struct Location {
+//     start: u16,
+//     end: u16,
+//     row: u16,
+// }
+
+type Location = (u16, u16, u16);
 
 pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
     input = input.trim();
-    let mut all_locations = HashMap::new();
-    for (row, line) in input.lines().enumerate() {
+
+    let lines: Vec<&str> = input.lines().collect();
+
+    let mut all_locations: HashMap<(u16, u16), Location> = HashMap::new();
+    for (row, line) in lines.iter().enumerate() {
         let mut previous_byte_offset = 0;
         for part_str in line
             .split(|c: char| !c.is_ascii_digit())
@@ -23,17 +29,16 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
             let start = start as u16;
             let end = start + part_str.len() as u16;
             let row = row as u16;
-            let location = Location { start, end, row };
-            for i in start..end {
-                all_locations.insert((row, i), location);
+            for col in start..end {
+                all_locations.insert((row, col), (start, end, row));
             }
         }
     }
 
-    let rows: Vec<&str> = input.lines().collect();
-
     let mut sum = 0;
-    for (asterisk_row, asterisk_col) in rows.iter().enumerate().flat_map(|(row, line)| {
+    // let row_len = lines.len();
+    // let col_len = lines[0].len();
+    for (asterisk_row, asterisk_col) in lines.iter().enumerate().flat_map(|(row, line)| {
         line.match_indices('*')
             .map(move |(index, _)| (row as u16, index as u16))
     }) {
@@ -51,26 +56,23 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
             (asterisk_row.checked_add(1), asterisk_col.checked_add(1)),
         ]
         .into_iter()
-        .filter_map(|(row, col)| all_locations.get(&(row?, col?)))
-        .copied();
+        .filter_map(|(row, col)| all_locations.get(&(row?, col?)));
 
-        for location in filtered_adjacent_locations {
+        for &location in filtered_adjacent_locations {
             if first.is_none() {
                 first = Some(location);
-            } else if first.unwrap() != location {
+            } else if unsafe { first.unwrap_unchecked() } != location {
                 second = Some(location);
                 break;
             }
         }
 
         if let (Some(first), Some(second)) = (first, second) {
-            let first_number = rows[first.row as usize]
-                [(first.start as usize)..(first.end as usize)]
+            let first_number = lines[first.2 as usize][(first.0 as usize)..(first.1 as usize)]
                 .parse::<u32>()
                 .unwrap();
 
-            let second_number = rows[second.row as usize]
-                [(second.start as usize)..(second.end as usize)]
+            let second_number = lines[second.2 as usize][(second.0 as usize)..(second.1 as usize)]
                 .parse::<u32>()
                 .unwrap();
 
@@ -79,6 +81,72 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
     }
     sum
 }
+
+// fn get_adjacent_cells(row: u16, col: u16, row_len: u16, col_len: u16) -> Vec<RowCol> {
+//     // in the middle
+//     if row.between(0, row_len) && col.between(0, col_len) {
+//         vec![
+//             (row, col + 1),
+//             (row - 1, col + 1),
+//             (row - 1, col),
+//             (row - 1, col - 1),
+//             (row, col - 1),
+//             (row + 1, col - 1),
+//             (row + 1, col),
+//             (row + 1, col + 1),
+//         ]
+//         // right edge
+//     } else if row.between(0, row_len) && col == col_len - 1 {
+//         vec![
+//             (row - 1, col),
+//             (row - 1, col - 1),
+//             (row, col - 1),
+//             (row + 1, col - 1),
+//             (row + 1, col),
+//         ]
+//         // top right corner
+//     } else if row == 0 && col == col_len - 1 {
+//         vec![(row, col - 1), (row + 1, col - 1), (row + 1, col)]
+//         // top edge
+//     } else if row == 0 && col.between(0, col_len) {
+//         vec![
+//             (row, col + 1),
+//             (row, col - 1),
+//             (row + 1, col - 1),
+//             (row + 1, col),
+//             (row + 1, col + 1),
+//         ]
+//         // top left corner
+//     } else if row == 0 && col == 0 {
+//         vec![(row, col + 1), (row + 1, col), (row + 1, col + 1)]
+//         // left edge
+//     } else if row.between(0, row_len) && col == 0 {
+//         vec![
+//             (row, col + 1),
+//             (row - 1, col + 1),
+//             (row - 1, col),
+//             (row + 1, col),
+//             (row + 1, col + 1),
+//         ]
+//         // bottom left corner
+//     } else if row == row_len - 1 && col == 0 {
+//         vec![(row, col + 1), (row - 1, col + 1), (row - 1, col)]
+//         // bottom edge
+//     } else if row == row_len - 1 && col.between(0, col_len) {
+//         vec![
+//             (row, col + 1),
+//             (row - 1, col + 1),
+//             (row - 1, col),
+//             (row - 1, col - 1),
+//             (row, col - 1),
+//         ]
+//         // bottom right corner
+//     } else if row == row_len - 1 && col == col_len - 1 {
+//         vec![(row - 1, col), (row - 1, col - 1), (row, col - 1)]
+//     } else {
+//         vec![]
+//     }
+// }
 
 #[cfg(test)]
 mod test {
