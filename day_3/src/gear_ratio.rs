@@ -26,11 +26,11 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
             let start = substring.find(part_str).unwrap() + previous_byte_offset;
             previous_byte_offset = start + part_str.len();
 
+            let row = row as u16;
             let start = start as u16;
             let end = start + part_str.len() as u16;
-            let row = row as u16;
             for col in start..end {
-                all_locations.insert((row, col), (start, end, row));
+                all_locations.insert((row, col), (row, start, end));
             }
         }
     }
@@ -67,12 +67,12 @@ pub fn get_all_gear_ratios_func(mut input: &str) -> u32 {
             }
         }
 
-        if let (Some(first), Some(second)) = (first, second) {
-            let first_number = lines[first.2 as usize][(first.0 as usize)..(first.1 as usize)]
+        if let (Some((row1, start1, end1)), Some((row2, start2, end2))) = (first, second) {
+            let first_number = lines[row1 as usize][(start1 as usize)..(end1 as usize)]
                 .parse::<u32>()
                 .unwrap();
 
-            let second_number = lines[second.2 as usize][(second.0 as usize)..(second.1 as usize)]
+            let second_number = lines[row2 as usize][(start2 as usize)..(end2 as usize)]
                 .parse::<u32>()
                 .unwrap();
 
