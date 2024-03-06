@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
+use num_traits::PrimInt;
 use regex::Regex;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -11,6 +12,33 @@ struct Location {
 }
 
 type LocationTuple = (u16, u16, u16);
+
+#[inline(always)]
+fn parse_number(lines: &[&str], row: u16, start: u16, end: u16) -> u32 {
+    lines[row as usize][(start as usize)..(end as usize)]
+        .parse()
+        .unwrap()
+}
+
+#[inline(always)]
+fn parse_number_usize(lines: &[&str], row: usize, start: usize, end: usize) -> u32 {
+    lines[row][start..end].parse().unwrap()
+}
+
+#[inline(always)]
+fn get_neighbors<N: PrimInt>(row: N, col: N) -> [(Option<N>, Option<N>); 8] {
+    let one = N::one();
+    [
+        (Some(row), col.checked_add(&one)),
+        (row.checked_sub(&one), col.checked_add(&one)),
+        (row.checked_sub(&one), Some(col)),
+        (row.checked_sub(&one), col.checked_sub(&one)),
+        (Some(row), col.checked_sub(&one)),
+        (row.checked_add(&one), col.checked_sub(&one)),
+        (row.checked_add(&one), Some(col)),
+        (row.checked_add(&one), col.checked_add(&one)),
+    ]
+}
 
 pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
     let digit_regex = Regex::new(r"(\d+)").unwrap();
@@ -41,16 +69,7 @@ pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
         })
         .map(|(asterisk_row, asterisk_col)| {
             let mut set: HashSet<Location> = HashSet::new();
-            [
-                (Some(asterisk_row), asterisk_col.checked_add(1)),
-                (asterisk_row.checked_sub(1), asterisk_col.checked_add(1)),
-                (asterisk_row.checked_sub(1), Some(asterisk_col)),
-                (asterisk_row.checked_sub(1), asterisk_col.checked_sub(1)),
-                (Some(asterisk_row), asterisk_col.checked_sub(1)),
-                (asterisk_row.checked_add(1), asterisk_col.checked_sub(1)),
-                (asterisk_row.checked_add(1), Some(asterisk_col)),
-                (asterisk_row.checked_add(1), asterisk_col.checked_add(1)),
-            ]
+            get_neighbors(asterisk_row, asterisk_col)
             .into_iter()
             .filter_map(|(row, col)| Some((row?, col?)))
             .for_each(|(row, col)| {
@@ -72,15 +91,10 @@ pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
                 Ordering::Equal => {
                     let mut set_iter = set.into_iter();
 
-                    let first_number_location = set_iter.next().unwrap();
-                    let first_number_row = matrix[first_number_location.row];
-                    let first_number_str = &first_number_row[first_number_location.start..first_number_location.end];
-                    let first_number = first_number_str.parse::<u32>().unwrap();
-
-                    let second_number_location = set_iter.next().unwrap();
-                    let second_number_row = matrix[second_number_location.row];
-                    let second_number_str = &second_number_row[second_number_location.start..second_number_location.end];
-                    let second_number = second_number_str.parse::<u32>().unwrap();
+                    let Location { row, start, end } = set_iter.next().unwrap();
+                    let first_number = parse_number_usize(&matrix, row, start, end);
+                    let Location { row, start, end } = set_iter.next().unwrap();
+                    let second_number = parse_number_usize(&matrix, row, start, end);
 
                     first_number * second_number
                 },
@@ -117,50 +131,34 @@ pub fn hashmap_locations_no_hashset_gear_ratios(mut input: &str) -> u32 {
         }
     }
 
-    lines
-        .iter()
-        .enumerate()
-        .flat_map(|(row, line)| {
-            line.match_indices('*')
-                .map(move |(index, _)| (row as u16, index as u16))
-        })
-        .filter_map(|(asterisk_row, asterisk_col)| {
-            let mut first: Option<LocationTuple> = None;
-            let mut second: Option<LocationTuple> = None;
+    let mut sum = 0;
+    for (asterisk_row, asterisk_col) in lines.iter().enumerate().flat_map(|(row, line)| {
+        line.match_indices('*')
+            .map(move |(index, _)| (row as u16, index as u16))
+    }) {
+        let mut first: Option<LocationTuple> = None;
+        let mut second: Option<LocationTuple> = None;
 
-            let filtered_adjacent_locations = [
-                (Some(asterisk_row), asterisk_col.checked_add(1)),
-                (asterisk_row.checked_sub(1), asterisk_col.checked_add(1)),
-                (asterisk_row.checked_sub(1), Some(asterisk_col)),
-                (asterisk_row.checked_sub(1), asterisk_col.checked_sub(1)),
-                (Some(asterisk_row), asterisk_col.checked_sub(1)),
-                (asterisk_row.checked_add(1), asterisk_col.checked_sub(1)),
-                (asterisk_row.checked_add(1), Some(asterisk_col)),
-                (asterisk_row.checked_add(1), asterisk_col.checked_add(1)),
-            ]
-            .into_iter()
-            .filter_map(|(row, col)| all_locations.get(&(row?, col?)));
-
-            for &location in filtered_adjacent_locations {
-                if first.is_none() {
-                    first = Some(location);
-                } else if first.unwrap() != location {
-                    second = Some(location);
-                    break;
+        for row_col in get_neighbors(asterisk_row, asterisk_col) {
+            if let (Some(row), Some(col)) = row_col {
+                if let Some(&location) = all_locations.get(&(row, col)) {
+                    if first.is_none() {
+                        first = Some(location);
+                    } else if first.unwrap() != location {
+                        second = Some(location);
+                        break;
+                    }
                 }
             }
+        }
 
-            Some(get_number_from_lines(&lines, first?) * get_number_from_lines(&lines, second?))
-        })
-        .sum()
-}
+        if let (Some(first), Some(second)) = (first, second) {
+            sum += parse_number(&lines, first.0, first.1, first.2)
+                * parse_number(&lines, second.0, second.1, second.2);
+        }
+    }
 
-#[inline(always)]
-fn get_number_from_lines(lines: &[&str], location: LocationTuple) -> u32 {
-    let (row, start, end) = location;
-    lines[row as usize][(start as usize)..(end as usize)]
-        .parse::<u32>()
-        .unwrap()
+    sum
 }
 
 #[cfg(test)]
