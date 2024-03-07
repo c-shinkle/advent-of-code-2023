@@ -14,15 +14,11 @@ struct Location {
 type LocationTuple = (u16, u16, u16);
 
 #[inline(always)]
-fn parse_number(lines: &[&str], row: u16, start: u16, end: u16) -> u32 {
+fn parse_number(lines: &[&str], location: LocationTuple) -> u32 {
+    let (row, start, end) = location;
     lines[row as usize][(start as usize)..(end as usize)]
         .parse()
         .unwrap()
-}
-
-#[inline(always)]
-fn parse_number_usize(lines: &[&str], row: usize, start: usize, end: usize) -> u32 {
-    lines[row][start..end].parse().unwrap()
 }
 
 #[inline(always)]
@@ -92,9 +88,9 @@ pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
                     let mut set_iter = set.into_iter();
 
                     let Location { row, start, end } = set_iter.next().unwrap();
-                    let first_number = parse_number_usize(&matrix, row, start, end);
+                    let first_number: u32 = matrix[row][start..end].parse().unwrap();
                     let Location { row, start, end } = set_iter.next().unwrap();
-                    let second_number = parse_number_usize(&matrix, row, start, end);
+                    let second_number: u32 = matrix[row][start..end].parse().unwrap();
 
                     first_number * second_number
                 },
@@ -106,30 +102,31 @@ pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
         .sum()
 }
 
+fn get_all_locations(lines: &[&str]) -> HashMap<(u16, u16), LocationTuple> {
+    lines
+        .iter()
+        .enumerate()
+        .flat_map(|(row, line)| {
+            let mut previous_byte_offset = 0;
+            line.split(|c: char| !c.is_ascii_digit())
+                .filter(|s| !s.is_empty())
+                .map(move |part_str| {
+                    let substring = &line[previous_byte_offset..line.len()];
+                    let start = substring.find(part_str).unwrap() + previous_byte_offset;
+                    previous_byte_offset = start + part_str.len();
+                    (row as u16, start as u16, previous_byte_offset as u16)
+                })
+        })
+        .flat_map(|(row, start, end)| (start..end).map(move |col| ((row, col), (row, start, end))))
+        .collect()
+}
+
 pub fn hashmap_locations_no_hashset_gear_ratios(mut input: &str) -> u32 {
     input = input.trim();
 
     let lines: Vec<&str> = input.lines().collect();
 
-    let mut all_locations: HashMap<(u16, u16), LocationTuple> = HashMap::new();
-    for (row, line) in lines.iter().enumerate() {
-        let mut previous_byte_offset = 0;
-        for part_str in line
-            .split(|c: char| !c.is_ascii_digit())
-            .filter(|s| !s.is_empty())
-        {
-            let substring = &line[previous_byte_offset..line.len()];
-            let start = substring.find(part_str).unwrap() + previous_byte_offset;
-            previous_byte_offset = start + part_str.len();
-
-            let row = row as u16;
-            let start = start as u16;
-            let end = start + part_str.len() as u16;
-            for col in start..end {
-                all_locations.insert((row, col), (row, start, end));
-            }
-        }
-    }
+    let all_locations = get_all_locations(&lines);
 
     let mut sum = 0;
     for (asterisk_row, asterisk_col) in lines.iter().enumerate().flat_map(|(row, line)| {
@@ -153,8 +150,7 @@ pub fn hashmap_locations_no_hashset_gear_ratios(mut input: &str) -> u32 {
         }
 
         if let (Some(first), Some(second)) = (first, second) {
-            sum += parse_number(&lines, first.0, first.1, first.2)
-                * parse_number(&lines, second.0, second.1, second.2);
+            sum += parse_number(&lines, first) * parse_number(&lines, second);
         }
     }
 
