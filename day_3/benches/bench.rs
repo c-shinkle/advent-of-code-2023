@@ -4,15 +4,11 @@ extern crate test;
 
 #[cfg(test)]
 mod tests {
-    use day_3::{
-        all_parts::{get_all_part_numbers_func, no_vecs_or_ndarray_or_regex},
-        gear_ratio::*,
-        input::INPUT,
-    };
+    use day_3::{gear_ratio::*, input::INPUT, sum_parts::*};
     use test::{black_box, Bencher};
 
     #[bench]
-    fn functional_bench(b: &mut Bencher) {
+    fn sum_parts_functional_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {
@@ -23,7 +19,7 @@ mod tests {
     }
 
     #[bench]
-    fn no_vecs_or_ndarray_or_regex_bench(b: &mut Bencher) {
+    fn sum_parts_no_vecs_or_ndarray_or_regex_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {
@@ -34,7 +30,7 @@ mod tests {
     }
 
     #[bench]
-    fn get_all_gear_ratios_func_bench(b: &mut Bencher) {
+    fn gear_ratios_functional_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {
@@ -45,7 +41,7 @@ mod tests {
     }
 
     #[bench]
-    fn hashmap_locations_no_hashset_bench(b: &mut Bencher) {
+    fn gear_ratio_hashmap_locations_no_hashset_bench(b: &mut Bencher) {
         let mut sum = u32::default();
 
         b.iter(|| {

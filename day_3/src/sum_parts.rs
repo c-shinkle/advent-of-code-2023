@@ -41,15 +41,15 @@ pub fn get_all_part_numbers_func(mut input: &str) -> u32 {
 }
 
 pub fn no_vecs_or_ndarray_or_regex<const ROW_SIZE: usize, const COL_SIZE: usize>(
-    mut input: &str,
+    input: &str,
 ) -> u32 {
-    let mut sum = 0;
-    input = input.trim();
+    let input = input.trim();
     let mut matrix: [[u8; COL_SIZE]; ROW_SIZE] = [[0; COL_SIZE]; ROW_SIZE];
     for (row, line) in matrix.iter_mut().zip(input.lines()) {
         row.copy_from_slice(line.as_bytes());
     }
 
+    let mut sum = 0;
     for (row_index, line) in input.lines().enumerate() {
         let mut previous_byte_offset = 0;
         for part_str in line
