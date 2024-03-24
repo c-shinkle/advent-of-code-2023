@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use num_traits::PrimInt;
 use regex::Regex;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
 struct Location {
     start: usize,
     end: usize,
@@ -36,27 +36,25 @@ fn get_neighbors<N: PrimInt>(row: N, col: N) -> [(Option<N>, Option<N>); 8] {
     ]
 }
 
-pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
+pub fn first_impl_gear_ratios(input: &str) -> u32 {
+    let lines: Vec<&str> = input.trim().lines().collect();
     let digit_regex = Regex::new(r"(\d+)").unwrap();
-    input = input.trim();
-    let matrix: Vec<&str> = input.lines().collect();
-    let all_locations: Vec<Location> = input
-        .lines()
+
+    let all_locations: Vec<Location> = lines
+        .iter()
         .enumerate()
         .flat_map(|(row, line)| {
-            digit_regex
-                .find_iter(line)
-                .map(move |capture| (row, capture))
-        })
-        .map(|(row, capture)| Location {
-            start: capture.start(),
-            end: capture.end(),
-            row,
+            digit_regex.find_iter(line).map(move |capture| Location {
+                start: capture.start(),
+                end: capture.end(),
+                row,
+            })
         })
         .collect();
+
     let asterisk_regex = Regex::new(r"(\*)").unwrap();
-    input
-        .lines()
+    lines
+        .iter()
         .enumerate()
         .flat_map(|(row, line)| {
             asterisk_regex
@@ -64,33 +62,32 @@ pub fn first_impl_gear_ratios(mut input: &str) -> u32 {
                 .map(move |capture| (row, capture.start()))
         })
         .map(|(asterisk_row, asterisk_col)| {
-            let mut set: HashSet<Location> = HashSet::new();
+            let mut set = BTreeSet::new();
             get_neighbors(asterisk_row, asterisk_col)
-            .into_iter()
-            .filter_map(|(row, col)| Some((row?, col?)))
-            .for_each(|(row, col)| {
-                for location in all_locations.iter() {
-                    let Location {
-                        start,
-                        end,
-                        row: digit_row,
-                    } = location;
-                    let range = *start..*end;
-                    if row == *digit_row && range.contains(&col) {
-                        set.insert(*location);
+                .into_iter()
+                .filter_map(|(row, col)| Some((row?, col?)))
+                .for_each(|(row, col)| {
+                    for location in all_locations.iter() {
+                        let Location {
+                            start,
+                            end,
+                            row: digit_row,
+                        } = location;
+                        let range = *start..*end;
+                        if row == *digit_row && range.contains(&col) {
+                            set.insert(*location);
+                        }
                     }
-                }
-            });
+                });
 
             match set.len().cmp(&2) {
                 Ordering::Less => 0,
                 Ordering::Equal => {
-                    let mut set_iter = set.into_iter();
+                    let Location { row, start, end } = unsafe { set.pop_first().unwrap_unchecked() };
+                    let first_number: u32 = lines[row][start..end].parse().unwrap();
 
-                    let Location { row, start, end } = set_iter.next().unwrap();
-                    let first_number: u32 = matrix[row][start..end].parse().unwrap();
-                    let Location { row, start, end } = set_iter.next().unwrap();
-                    let second_number: u32 = matrix[row][start..end].parse().unwrap();
+                    let Location { row, start, end } = unsafe { set.pop_first().unwrap_unchecked() };
+                    let second_number: u32 = lines[row][start..end].parse().unwrap();
 
                     first_number * second_number
                 },
