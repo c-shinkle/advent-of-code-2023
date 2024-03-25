@@ -17,4 +17,15 @@ mod tests {
 
         assert_eq!(sum, 21485);
     }
+
+    #[bench]
+    fn part_1_func_bench(b: &mut Bencher) {
+        let mut sum = u32::default();
+
+        b.iter(|| {
+            sum = black_box(part_1_func(input::INPUT));
+        });
+
+        assert_eq!(sum, 21485);
+    }
 }
