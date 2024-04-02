@@ -56,56 +56,54 @@ pub fn part_1_impr(input: &str) -> u64 {
     min
 }
 
-pub fn get_mapping_with_next_index(input: &str, skip: usize) -> (usize, Vec<(u64, u64, u64)>) {
-    let mappings: Vec<(usize, (u64, u64, u64))> = input
-        .lines()
-        .enumerate()
-        .skip(skip)
-        .take_while(|(_, line)| !line.is_empty())
-        .map(|(index, line)| {
-            let mapping = line
-                .split_ascii_whitespace()
+pub fn get_mapping_with_next_index(lines: &[&str], index: usize) -> (Vec<(u64, u64, u64)>, usize) {
+    let mappings: Vec<(u64, u64, u64)> = lines
+        .iter()
+        .take_while(|line| !line.is_empty())
+        .map(|line| {
+            line.split_ascii_whitespace()
                 .map(|number_str| number_str.parse().unwrap())
                 .collect_tuple::<(u64, u64, u64)>()
-                .unwrap();
-            (index, mapping)
+                .unwrap()
         })
         .collect();
+    let len = mappings.len() + 2;
+    (mappings, index + len)
 }
 
 fn get_mapping_func(mappings: &[(u64, u64, u64)], value: u64) -> u64 {
     mappings
         .iter()
-        .copied()
-        .find_map(|(dest, src, len)| {
-            (src <= value && value < src + len).then(|| value - src + dest)
-        })
+        .find(|&&(_, src, len)| (src..src + len).contains(&value))
+        .map(|&(dest, src, _)| value - src + dest)
         .unwrap_or(value)
 }
 
 pub fn part_1_func(input: &str) -> u64 {
     let input = input.trim();
-    let (skip, seed_to_soil) = get_mapping_with_next_index(input, 3);
-    let (skip, soil_to_fertilizer) = get_mapping_with_next_index(input, skip);
-    let (skip, fertilizer_to_water) = get_mapping_with_next_index(input, skip);
-    let (skip, water_to_light) = get_mapping_with_next_index(input, skip);
-    let (skip, light_to_temp) = get_mapping_with_next_index(input, skip);
-    let (skip, temp_to_humidity) = get_mapping_with_next_index(input, skip);
-    let (_, humidity_to_location) = get_mapping_with_next_index(input, skip);
+    let lines: Vec<&str> = input.lines().collect();
+    let mut offset = 3;
+    let list_of_mappings: Vec<Vec<(u64, u64, u64)>> = (0..7)
+        .map(|_| {
+            let (mapping, next_offset) = get_mapping_with_next_index(&lines[offset..], offset);
+            offset = next_offset;
+            mapping
+        })
+        .collect();
 
-    let seed_line = input.lines().next().unwrap();
+    let seed_line = lines[0];
     seed_line[(seed_line.find(':').unwrap() + 1)..]
         .split_ascii_whitespace()
         .map(|seed_str| {
             let seed = seed_str.parse().unwrap();
 
-            let soil = get_mapping_func(&seed_to_soil, seed);
-            let fertilizer = get_mapping_func(&soil_to_fertilizer, soil);
-            let water = get_mapping_func(&fertilizer_to_water, fertilizer);
-            let light = get_mapping_func(&water_to_light, water);
-            let temp = get_mapping_func(&light_to_temp, light);
-            let humidity = get_mapping_func(&temp_to_humidity, temp);
-            get_mapping_func(&humidity_to_location, humidity)
+            let soil = get_mapping_func(&list_of_mappings[0], seed);
+            let fertilizer = get_mapping_func(&list_of_mappings[1], soil);
+            let water = get_mapping_func(&list_of_mappings[2], fertilizer);
+            let light = get_mapping_func(&list_of_mappings[3], water);
+            let temp = get_mapping_func(&list_of_mappings[4], light);
+            let humidity = get_mapping_func(&list_of_mappings[5], temp);
+            get_mapping_func(&list_of_mappings[6], humidity)
         })
         .min()
         .unwrap()
