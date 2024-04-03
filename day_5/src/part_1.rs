@@ -1,7 +1,9 @@
 use itertools::Itertools;
 use std::str::Lines;
 
-fn map_line(lines: &mut Lines<'_>) -> Vec<(u64, u64, u64)> {
+type Mapping = (u64, u64, u64);
+
+fn take_mapping_from_lines(lines: &mut Lines<'_>) -> Vec<Mapping> {
     let mut vec = Vec::new();
     lines.next();
     for line in lines.by_ref().take_while(|line| !line.is_empty()) {
@@ -14,7 +16,7 @@ fn map_line(lines: &mut Lines<'_>) -> Vec<(u64, u64, u64)> {
     vec
 }
 
-fn get_mapping_impr(mappings: &[(u64, u64, u64)], value: u64) -> u64 {
+fn get_mapping_impr(mappings: &[Mapping], value: u64) -> u64 {
     for (dest, src, len) in mappings.iter().copied() {
         if src <= value && value < src + len {
             return value - src + dest;
@@ -29,13 +31,13 @@ pub fn part_1_impr(input: &str) -> u64 {
     // prepare iterator by consuming empty line
     lines.next();
 
-    let seed_to_soil = map_line(&mut lines);
-    let soil_to_fertilizer = map_line(&mut lines);
-    let fertilizer_to_water = map_line(&mut lines);
-    let water_to_light = map_line(&mut lines);
-    let light_to_temp = map_line(&mut lines);
-    let temp_to_humidity = map_line(&mut lines);
-    let humidity_to_location = map_line(&mut lines);
+    let seed_to_soil = take_mapping_from_lines(&mut lines);
+    let soil_to_fertilizer = take_mapping_from_lines(&mut lines);
+    let fertilizer_to_water = take_mapping_from_lines(&mut lines);
+    let water_to_light = take_mapping_from_lines(&mut lines);
+    let light_to_temp = take_mapping_from_lines(&mut lines);
+    let temp_to_humidity = take_mapping_from_lines(&mut lines);
+    let humidity_to_location = take_mapping_from_lines(&mut lines);
 
     let mut min = u64::MAX;
     for seed in seed_line[seed_line.find(':').unwrap() + 1..]
@@ -56,22 +58,20 @@ pub fn part_1_impr(input: &str) -> u64 {
     min
 }
 
-pub fn get_mapping_with_next_index(lines: &[&str], index: usize) -> (Vec<(u64, u64, u64)>, usize) {
-    let mappings: Vec<(u64, u64, u64)> = lines
+fn get_mapping(lines: &[&str]) -> Vec<Mapping> {
+    lines
         .iter()
         .take_while(|line| !line.is_empty())
         .map(|line| {
             line.split_ascii_whitespace()
                 .map(|number_str| number_str.parse().unwrap())
-                .collect_tuple::<(u64, u64, u64)>()
+                .collect_tuple::<Mapping>()
                 .unwrap()
         })
-        .collect();
-    let len = mappings.len() + 2;
-    (mappings, index + len)
+        .collect()
 }
 
-fn get_mapping_func(mappings: &[(u64, u64, u64)], value: u64) -> u64 {
+fn get_mapping_func(mappings: &[Mapping], value: u64) -> u64 {
     mappings
         .iter()
         .find(|&&(_, src, len)| (src..src + len).contains(&value))
@@ -80,15 +80,11 @@ fn get_mapping_func(mappings: &[(u64, u64, u64)], value: u64) -> u64 {
 }
 
 pub fn part_1_func(input: &str) -> u64 {
-    let input = input.trim();
-    let lines: Vec<&str> = input.lines().collect();
-    let mut offset = 3;
-    let list_of_mappings: Vec<Vec<(u64, u64, u64)>> = (0..7)
-        .map(|_| {
-            let (mapping, next_offset) = get_mapping_with_next_index(&lines[offset..], offset);
-            offset = next_offset;
-            mapping
-        })
+    let lines: Vec<&str> = input.trim().lines().collect();
+    let list_of_mappings: Vec<Vec<Mapping>> = lines
+        .iter()
+        .positions(|line| line.contains("map:"))
+        .map(|offset| get_mapping(&lines[(offset + 1)..]))
         .collect();
 
     let seed_line = lines[0];
@@ -114,9 +110,7 @@ mod tests {
     use super::*;
     use crate::input::INPUT;
 
-    #[test]
-    fn impr_sample() {
-        let input = "
+    const EXAMPLE: &str = "
 seeds: 79 14 55 13
 
 seed-to-soil map:
@@ -149,57 +143,28 @@ temperature-to-humidity map:
 
 humidity-to-location map:
 60 56 37
-56 93 4
-";
+56 93 4";
 
-        let actual = part_1_impr(input);
+    #[test]
+    fn impr_sample() {
+        let actual = part_1_impr(EXAMPLE);
         assert_eq!(actual, 35);
     }
 
     #[test]
     fn func_sample() {
-        let input = "
-seeds: 79 14 55 13
-
-seed-to-soil map:
-50 98 2
-52 50 48
-
-soil-to-fertilizer map:
-0 15 37
-37 52 2
-39 0 15
-
-fertilizer-to-water map:
-49 53 8
-0 11 42
-42 0 7
-57 7 4
-
-water-to-light map:
-88 18 7
-18 25 70
-
-light-to-temperature map:
-45 77 23
-81 45 19
-68 64 13
-
-temperature-to-humidity map:
-0 69 1
-1 0 69
-
-humidity-to-location map:
-60 56 37
-56 93 4
-";
-
-        let actual = part_1_func(input);
+        let actual = part_1_func(EXAMPLE);
         assert_eq!(actual, 35);
     }
 
     #[test]
     fn impr_puzzle_input() {
+        let actual = part_1_impr(INPUT);
+        assert_eq!(actual, 107430936);
+    }
+
+    #[test]
+    fn func_puzzle_input() {
         let actual = part_1_func(INPUT);
         assert_eq!(actual, 107430936);
     }
