@@ -9,7 +9,7 @@ mod tests {
 
     #[bench]
     fn part_1_impr_bench(b: &mut Bencher) {
-        let mut sum = u64::default();
+        let mut sum = Index::default();
 
         b.iter(|| {
             sum = black_box(part_1_impr(input::INPUT));
@@ -20,7 +20,7 @@ mod tests {
 
     #[bench]
     fn part_1_func_bench(b: &mut Bencher) {
-        let mut sum = u64::default();
+        let mut sum = Index::default();
 
         b.iter(|| {
             sum = black_box(part_1_func(input::INPUT));

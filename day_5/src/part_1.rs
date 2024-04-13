@@ -1,31 +1,31 @@
-use itertools::Itertools;
 use std::str::Lines;
 
-type Mapping = (u64, u64, u64);
+pub type Index = u64;
+type Mapping = (Index, Index, Index);
 
 fn take_mapping_from_lines(lines: &mut Lines<'_>) -> Vec<Mapping> {
     let mut vec = Vec::new();
     lines.next();
     for line in lines.by_ref().take_while(|line| !line.is_empty()) {
         let mut number_strs = line.split_ascii_whitespace();
-        let dest: u64 = number_strs.next().unwrap().parse().unwrap();
-        let src: u64 = number_strs.next().unwrap().parse().unwrap();
-        let len: u64 = number_strs.next().unwrap().parse().unwrap();
+        let dest: Index = number_strs.next().unwrap().parse().unwrap();
+        let src: Index = number_strs.next().unwrap().parse().unwrap();
+        let len: Index = number_strs.next().unwrap().parse().unwrap();
         vec.push((dest, src, len));
     }
     vec
 }
 
-fn get_mapping_impr(mappings: &[Mapping], value: u64) -> u64 {
-    for (dest, src, len) in mappings.iter().copied() {
-        if src <= value && value < src + len {
+fn get_mapping_impr(mappings: &[Mapping], value: Index) -> Index {
+    for (dest, src, len) in mappings {
+        if *src <= value && value < src + len {
             return value - src + dest;
         }
     }
     value
 }
 
-pub fn part_1_impr(input: &str) -> u64 {
+pub fn part_1_impr(input: &str) -> Index {
     let mut lines = input.trim().lines();
     let seed_line = lines.next().unwrap();
     // prepare iterator by consuming empty line
@@ -39,7 +39,7 @@ pub fn part_1_impr(input: &str) -> u64 {
     let temp_to_humidity = take_mapping_from_lines(&mut lines);
     let humidity_to_location = take_mapping_from_lines(&mut lines);
 
-    let mut min = u64::MAX;
+    let mut min = Index::MAX;
     for seed in seed_line[seed_line.find(':').unwrap() + 1..]
         .split_ascii_whitespace()
         .map(|seed_str| seed_str.parse().unwrap())
@@ -63,15 +63,16 @@ fn get_mapping(lines: &[&str]) -> Vec<Mapping> {
         .iter()
         .take_while(|line| !line.is_empty())
         .map(|line| {
-            line.split_ascii_whitespace()
+            let numbers: Vec<Index> = line
+                .split_ascii_whitespace()
                 .map(|number_str| number_str.parse().unwrap())
-                .collect_tuple::<Mapping>()
-                .unwrap()
+                .collect();
+            (numbers[0], numbers[1], numbers[2])
         })
         .collect()
 }
 
-fn get_mapping_func(mappings: &[Mapping], value: u64) -> u64 {
+fn get_mapping_func(mappings: &[Mapping], value: Index) -> Index {
     mappings
         .iter()
         .find(|&&(_, src, len)| (src..src + len).contains(&value))
@@ -79,12 +80,13 @@ fn get_mapping_func(mappings: &[Mapping], value: u64) -> u64 {
         .unwrap_or(value)
 }
 
-pub fn part_1_func(input: &str) -> u64 {
+pub fn part_1_func(input: &str) -> Index {
     let lines: Vec<&str> = input.trim().lines().collect();
     let list_of_mappings: Vec<Vec<Mapping>> = lines
         .iter()
-        .positions(|line| line.contains("map:"))
-        .map(|offset| get_mapping(&lines[(offset + 1)..]))
+        .enumerate()
+        .filter(|(_, line)| line.contains("map:"))
+        .map(|(offset, _)| get_mapping(&lines[(offset + 1)..]))
         .collect();
 
     let seed_line = lines[0];
