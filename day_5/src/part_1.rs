@@ -2,18 +2,44 @@ use std::str::Lines;
 
 pub type Index = u64;
 type Mapping = (Index, Index, Index);
+struct MappingStruct {
+    dest: Index,
+    src: Index,
+    len: Index,
+}
+
+impl FromIterator<Index> for MappingStruct {
+    fn from_iter<T: IntoIterator<Item = Index>>(iter: T) -> Self {
+        let mut into_iter = iter.into_iter();
+
+        MappingStruct {
+            dest: into_iter.next().unwrap(),
+            src: into_iter.next().unwrap(),
+            len: into_iter.next().unwrap(),
+        }
+    }
+}
+
+impl From<MappingStruct> for Mapping {
+    fn from(MappingStruct { dest, src, len }: MappingStruct) -> Self {
+        (dest, src, len)
+    }
+}
 
 fn take_mapping_from_lines(lines: &mut Lines<'_>) -> Vec<Mapping> {
-    let mut vec = Vec::new();
     lines.next();
-    for line in lines.by_ref().take_while(|line| !line.is_empty()) {
-        let mut number_strs = line.split_ascii_whitespace();
-        let dest: Index = number_strs.next().unwrap().parse().unwrap();
-        let src: Index = number_strs.next().unwrap().parse().unwrap();
-        let len: Index = number_strs.next().unwrap().parse().unwrap();
-        vec.push((dest, src, len));
-    }
-    vec
+    lines
+        .by_ref()
+        .take_while(|line| !line.is_empty())
+        .map(|line| {
+            let mut number_strs = line.split_ascii_whitespace();
+            (
+                number_strs.next().unwrap().parse().unwrap(),
+                number_strs.next().unwrap().parse().unwrap(),
+                number_strs.next().unwrap().parse().unwrap(),
+            )
+        })
+        .collect()
 }
 
 fn get_mapping_impr(mappings: &[Mapping], value: Index) -> Index {
@@ -63,16 +89,15 @@ fn get_mapping(lines: &[&str]) -> Vec<Mapping> {
         .iter()
         .take_while(|line| !line.is_empty())
         .map(|line| {
-            let numbers: Vec<Index> = line
-                .split_ascii_whitespace()
-                .map(|number_str| number_str.parse().unwrap())
-                .collect();
-            (numbers[0], numbers[1], numbers[2])
+            line.split_ascii_whitespace()
+                .map(|number_str| number_str.parse::<Index>().unwrap())
+                .collect::<MappingStruct>()
+                .into()
         })
         .collect()
 }
 
-fn get_mapping_func(mappings: &[Mapping], value: Index) -> Index {
+fn map_to_func(mappings: &[Mapping], value: Index) -> Index {
     mappings
         .iter()
         .find(|&&(_, src, len)| (src..src + len).contains(&value))
@@ -95,13 +120,13 @@ pub fn part_1_func(input: &str) -> Index {
         .map(|seed_str| {
             let seed = seed_str.parse().unwrap();
 
-            let soil = get_mapping_func(&list_of_mappings[0], seed);
-            let fertilizer = get_mapping_func(&list_of_mappings[1], soil);
-            let water = get_mapping_func(&list_of_mappings[2], fertilizer);
-            let light = get_mapping_func(&list_of_mappings[3], water);
-            let temp = get_mapping_func(&list_of_mappings[4], light);
-            let humidity = get_mapping_func(&list_of_mappings[5], temp);
-            get_mapping_func(&list_of_mappings[6], humidity)
+            let soil = map_to_func(&list_of_mappings[0], seed);
+            let fertilizer = map_to_func(&list_of_mappings[1], soil);
+            let water = map_to_func(&list_of_mappings[2], fertilizer);
+            let light = map_to_func(&list_of_mappings[3], water);
+            let temp = map_to_func(&list_of_mappings[4], light);
+            let humidity = map_to_func(&list_of_mappings[5], temp);
+            map_to_func(&list_of_mappings[6], humidity)
         })
         .min()
         .unwrap()
