@@ -24,7 +24,7 @@ impl From<MappingStruct> for Mapping {
     }
 }
 
-fn take_mappings_from_lines_func(lines: &[&str]) -> Vec<Mapping> {
+fn take_mappings_from_lines(lines: &[&str]) -> Vec<Mapping> {
     lines
         .iter()
         .take_while(|line| !line.is_empty())
@@ -37,7 +37,7 @@ fn take_mappings_from_lines_func(lines: &[&str]) -> Vec<Mapping> {
         .collect()
 }
 
-fn map_to_func(mappings: &[Mapping], value: Index) -> Index {
+fn get_mapping(mappings: &[Mapping], value: Index) -> Index {
     mappings
         .iter()
         .find(|&&(_, src, len)| (src..src + len).contains(&value))
@@ -45,13 +45,13 @@ fn map_to_func(mappings: &[Mapping], value: Index) -> Index {
         .unwrap_or(value)
 }
 
-pub fn part_1_func(input: &str) -> Index {
+pub fn part_1(input: &str) -> Index {
     let lines: Vec<&str> = input.trim().lines().collect();
     let list_of_mappings: Vec<Vec<Mapping>> = lines
         .iter()
         .enumerate()
         .filter(|(_, line)| line.contains("map:"))
-        .map(|(offset, _)| take_mappings_from_lines_func(&lines[(offset + 1)..]))
+        .map(|(offset, _)| take_mappings_from_lines(&lines[(offset + 1)..]))
         .collect();
 
     let seed_line = lines[0];
@@ -60,13 +60,13 @@ pub fn part_1_func(input: &str) -> Index {
         .map(|seed_str| {
             let seed = seed_str.parse().unwrap();
 
-            let soil = map_to_func(&list_of_mappings[0], seed);
-            let fertilizer = map_to_func(&list_of_mappings[1], soil);
-            let water = map_to_func(&list_of_mappings[2], fertilizer);
-            let light = map_to_func(&list_of_mappings[3], water);
-            let temp = map_to_func(&list_of_mappings[4], light);
-            let humidity = map_to_func(&list_of_mappings[5], temp);
-            map_to_func(&list_of_mappings[6], humidity)
+            let soil = get_mapping(&list_of_mappings[0], seed);
+            let fertilizer = get_mapping(&list_of_mappings[1], soil);
+            let water = get_mapping(&list_of_mappings[2], fertilizer);
+            let light = get_mapping(&list_of_mappings[3], water);
+            let temp = get_mapping(&list_of_mappings[4], light);
+            let humidity = get_mapping(&list_of_mappings[5], temp);
+            get_mapping(&list_of_mappings[6], humidity)
         })
         .min()
         .unwrap()
@@ -79,13 +79,13 @@ mod tests {
 
     #[test]
     fn func_sample() {
-        let actual = part_1_func(EXAMPLE);
+        let actual = part_1(EXAMPLE);
         assert_eq!(actual, 35);
     }
 
     #[test]
     fn func_puzzle_input() {
-        let actual = part_1_func(INPUT);
+        let actual = part_1(INPUT);
         assert_eq!(actual, 107430936);
     }
 }
