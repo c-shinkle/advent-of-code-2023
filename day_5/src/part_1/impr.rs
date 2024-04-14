@@ -2,19 +2,17 @@ use super::*;
 use std::str::Lines;
 
 fn take_mappings_from_lines(lines: &mut Lines<'_>) -> Vec<Mapping> {
+    let mut vec = Vec::new();
     lines.next();
-    lines
-        .by_ref()
-        .take_while(|line| !line.is_empty())
-        .map(|line| {
-            let mut number_strs = line.split_ascii_whitespace();
-            (
-                number_strs.next().unwrap().parse().unwrap(),
-                number_strs.next().unwrap().parse().unwrap(),
-                number_strs.next().unwrap().parse().unwrap(),
-            )
-        })
-        .collect()
+    for line in lines.by_ref().take_while(|line| !line.is_empty()) {
+        let mut number_strs = line.split_ascii_whitespace();
+        vec.push((
+            number_strs.next().unwrap().parse().unwrap(),
+            number_strs.next().unwrap().parse().unwrap(),
+            number_strs.next().unwrap().parse().unwrap(),
+        ));
+    }
+    vec
 }
 
 fn get_mapping(mappings: &[Mapping], value: Index) -> Index {
@@ -40,11 +38,11 @@ pub fn part_1(input: &str) -> Index {
     let temp_to_humidity = take_mappings_from_lines(&mut lines);
     let humidity_to_location = take_mappings_from_lines(&mut lines);
 
+    let seed_strs = &seed_line[seed_line.find(':').unwrap() + 1..];
     let mut min = Index::MAX;
-    for seed in seed_line[seed_line.find(':').unwrap() + 1..]
-        .split_ascii_whitespace()
-        .map(|seed_str| seed_str.parse().unwrap())
-    {
+
+    for seed_str in seed_strs.split_ascii_whitespace() {
+        let seed = seed_str.parse().unwrap();
         let soil = get_mapping(&seed_to_soil, seed);
         let fertilizer = get_mapping(&soil_to_fertilizer, soil);
         let water = get_mapping(&fertilizer_to_water, fertilizer);

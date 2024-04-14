@@ -6,53 +6,48 @@ struct MappingStruct {
     len: Index,
 }
 
-impl FromIterator<Index> for MappingStruct {
-    fn from_iter<T: IntoIterator<Item = Index>>(iter: T) -> Self {
+impl<'a> FromIterator<&'a str> for MappingStruct {
+    fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
         let mut into_iter = iter.into_iter();
 
         MappingStruct {
-            dest: into_iter.next().unwrap(),
-            src: into_iter.next().unwrap(),
-            len: into_iter.next().unwrap(),
+            dest: into_iter.next().unwrap().parse().unwrap(),
+            src: into_iter.next().unwrap().parse().unwrap(),
+            len: into_iter.next().unwrap().parse().unwrap(),
         }
     }
 }
 
-impl From<MappingStruct> for Mapping {
-    fn from(MappingStruct { dest, src, len }: MappingStruct) -> Self {
-        (dest, src, len)
-    }
-}
-
-fn take_mappings_from_lines(lines: &[&str]) -> Vec<Mapping> {
-    lines
-        .iter()
-        .take_while(|line| !line.is_empty())
-        .map(|line| {
-            line.split_ascii_whitespace()
-                .map(|number_str| number_str.parse().unwrap())
-                .collect::<MappingStruct>()
-                .into()
-        })
-        .collect()
-}
-
-fn get_mapping(mappings: &[Mapping], value: Index) -> Index {
+fn get_mapping(mappings: &[MappingStruct], value: Index) -> Index {
     mappings
         .iter()
-        .find(|&&(_, src, len)| (src..src + len).contains(&value))
-        .map(|&(dest, src, _)| value - src + dest)
+        .find(|&&MappingStruct { src, len, .. }| (src..src + len).contains(&value))
+        .map(|MappingStruct { dest, src, .. }| value - src + dest)
         .unwrap_or(value)
 }
 
 pub fn part_1(input: &str) -> Index {
     let lines: Vec<&str> = input.trim().lines().collect();
-    let list_of_mappings: Vec<Vec<Mapping>> = lines
+    let list_of_mappings: Vec<Vec<MappingStruct>> = lines
         .iter()
         .enumerate()
         .filter(|(_, line)| line.contains("map:"))
-        .map(|(offset, _)| take_mappings_from_lines(&lines[(offset + 1)..]))
+        .map(|(offset, _)| {
+            lines[(offset + 1)..]
+                .iter()
+                .take_while(|line| !line.is_empty())
+                .map(|line| line.split_ascii_whitespace().collect())
+                .collect()
+        })
         .collect();
+
+    let seed_to_soil = &list_of_mappings[0];
+    let soil_to_fertilizer = &list_of_mappings[1];
+    let fertilizer_to_water = &list_of_mappings[2];
+    let water_to_light = &list_of_mappings[3];
+    let light_to_temp = &list_of_mappings[4];
+    let temp_to_humidity = &list_of_mappings[5];
+    let humidity_to_location = &list_of_mappings[6];
 
     let seed_line = lines[0];
     seed_line[(seed_line.find(':').unwrap() + 1)..]
@@ -60,13 +55,13 @@ pub fn part_1(input: &str) -> Index {
         .map(|seed_str| {
             let seed = seed_str.parse().unwrap();
 
-            let soil = get_mapping(&list_of_mappings[0], seed);
-            let fertilizer = get_mapping(&list_of_mappings[1], soil);
-            let water = get_mapping(&list_of_mappings[2], fertilizer);
-            let light = get_mapping(&list_of_mappings[3], water);
-            let temp = get_mapping(&list_of_mappings[4], light);
-            let humidity = get_mapping(&list_of_mappings[5], temp);
-            get_mapping(&list_of_mappings[6], humidity)
+            let soil = get_mapping(seed_to_soil, seed);
+            let fertilizer = get_mapping(soil_to_fertilizer, soil);
+            let water = get_mapping(fertilizer_to_water, fertilizer);
+            let light = get_mapping(water_to_light, water);
+            let temp = get_mapping(light_to_temp, light);
+            let humidity = get_mapping(temp_to_humidity, temp);
+            get_mapping(humidity_to_location, humidity)
         })
         .min()
         .unwrap()
