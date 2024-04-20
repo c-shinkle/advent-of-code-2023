@@ -1,9 +1,9 @@
 use super::*;
 
 struct MappingStruct {
-    dest: Index,
-    src: Index,
-    len: Index,
+    dest: Location,
+    src: Location,
+    len: Location,
 }
 
 impl<'a> FromIterator<&'a str> for MappingStruct {
@@ -18,21 +18,21 @@ impl<'a> FromIterator<&'a str> for MappingStruct {
     }
 }
 
-fn get_mapping(mappings: &[MappingStruct], value: Index) -> Index {
+fn get_mapping(mappings: &[MappingStruct], value: Location) -> Location {
     mappings
         .iter()
-        .find(|&&MappingStruct { src, len, .. }| (src..src + len).contains(&value))
+        .find(|&&MappingStruct { src, len, .. }| src <= value && value < src + len)
         .map(|MappingStruct { dest, src, .. }| value - src + dest)
         .unwrap_or(value)
 }
 
-pub fn part_1(input: &str) -> Index {
+pub fn part_1(input: &str) -> Location {
     let lines: Vec<&str> = input.trim().lines().collect();
     let list_of_mappings: Vec<Vec<MappingStruct>> = lines
         .iter()
         .enumerate()
-        .filter(|(_, line)| line.contains("map:"))
-        .map(|(offset, _)| {
+        .filter_map(|(i, line)| line.contains("map:").then_some(i))
+        .map(|offset| {
             lines[(offset + 1)..]
                 .iter()
                 .take_while(|line| !line.is_empty())

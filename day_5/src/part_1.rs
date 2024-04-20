@@ -1,8 +1,8 @@
 pub mod func;
 pub mod impr;
 
-pub type Index = u64;
-pub type Mapping = (Index, Index, Index);
+pub type Location = u64;
+pub type Mapping = (Location, Location, Location);
 
 pub const EXAMPLE: &str = "
 seeds: 79 14 55 13

@@ -15,7 +15,7 @@ fn take_mappings_from_lines(lines: &mut Lines<'_>) -> Vec<Mapping> {
     vec
 }
 
-fn get_mapping(mappings: &[Mapping], value: Index) -> Index {
+fn get_mapping(mappings: &[Mapping], value: Location) -> Location {
     for (dest, src, len) in mappings {
         if *src <= value && value < src + len {
             return value - src + dest;
@@ -24,7 +24,7 @@ fn get_mapping(mappings: &[Mapping], value: Index) -> Index {
     value
 }
 
-pub fn part_1(input: &str) -> Index {
+pub fn part_1(input: &str) -> Location {
     let mut lines = input.trim().lines();
     let seed_line = lines.next().unwrap();
     // prepare iterator by consuming empty line
@@ -39,7 +39,7 @@ pub fn part_1(input: &str) -> Index {
     let humidity_to_location = take_mappings_from_lines(&mut lines);
 
     let seed_strs = &seed_line[seed_line.find(':').unwrap() + 1..];
-    let mut min = Index::MAX;
+    let mut min = Location::MAX;
 
     for seed_str in seed_strs.split_ascii_whitespace() {
         let seed = seed_str.parse().unwrap();
